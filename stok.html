@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stok Bahan Ajar - SITTA UT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* ============ CSS INTERNAL ============ */
+        .btn-add {
+            margin-bottom: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .btn-add:hover { background: #218838; transform: scale(1.02); }
+        
+        .btn-delete { 
+            background: #dc3545; 
+            color: white; 
+            padding: 5px 10px; 
+            font-size: 12px; 
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-delete:hover { background: #c82333; }
+        
+        .btn-edit { 
+            background: #ffc107; 
+            color: #333; 
+            padding: 5px 10px; 
+            font-size: 12px; 
+            margin-right: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-edit:hover { background: #e0a800; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            vertical-align: middle;
+        }
+        th {
+            background: #1a4d8c;
+            color: white;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        /* Filter container */
+        .filter-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .filter-container select, .filter-container input {
+            width: auto;
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .filter-container label {
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+        
+        /* Badge kode lokasi */
+        .kode-lokasi-badge {
+            background: #e0e0e0;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        
+        /* Statistik card */
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .stat-item {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Cover image styling */
+        .cover-img {
+            width: 50px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .no-cover {
+            width: 50px;
+            height: 60px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border-radius: 5px;
+        }
+        
+        /* Status stok warna */
+        .stok-aman { color: #28a745; font-weight: bold; }
+        .stok-menipis { color: #ffc107; font-weight: bold; }
+        .stok-kritis { color: #dc3545; font-weight: bold; }
+        
+        /* Preview gambar di modal */
+        .preview-box {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .preview-img {
+            max-width: 100px;
+            max-height: 120px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Responsif */
+        @media (max-width: 768px) {
+            th, td { font-size: 12px; padding: 8px; }
+            .filter-container { flex-direction: column; align-items: stretch; }
+            .filter-container select, .filter-container input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Informasi Stok Bahan Ajar</h1>
+            <p>Kelola data stok bahan ajar Universitas Terbuka - Berdasarkan Kode Lokasi Gudang</p>
+            <p style="font-size: 12px; margin-top: 5px;">✨ Fitur Preview Gambar | Dukung URL Online & File Lokal</p>
+        </header>
+        
+        <nav>
+            <a href="dashboard.html">🏠 Dashboard</a>
+            <a href="stok.html">📚 Stok Bahan Ajar</a>
+            <a href="tracking.html">🚚 Tracking Pengiriman</a>
+            <a href="#" id="logoutNav">🚪 Logout</a>
+        </nav>
+        
+        <main>
+            <!-- Filter Container -->
+            <div class="filter-container">
+                <label>📍 Filter Lokasi:</label>
+                <select id="filterLokasi">
+                    <option value="all">Semua Lokasi</option>
+                </select>
+                
+                <label>🔍 Cari:</label>
+                <input type="text" id="searchInput" placeholder="Cari kode/nama barang..." style="width: 250px;">
+                
+                <button class="btn btn-primary" id="btnResetFilter" style="background: #6c757d; padding: 8px 15px;">Reset Filter</button>
+            </div>
+            
+            <!-- Statistik Stok -->
+            <div class="stat-card" id="statContainer"></div>
+            
+            <!-- Tombol Tambah -->
+            <button class="btn-add" id="btnTambahStok">+ Tambah Baris Stok Baru</button>
+            
+            <!-- Tabel Stok -->
+            <div style="overflow-x: auto;">
+                <table id="tabelStok">
+                    <thead>
+                        <tr>
+                            <th>Cover</th>
+                            <th>Kode Lokasi</th>
+                            <th>Lokasi Gudang</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Bahan Ajar</th>
+                            <th>Edisi</th>
+                            <th>Stok</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyStok">
+                        <tr><td colspan="8" style="text-align: center;">Memuat data...</td><tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============ MODAL TAMBAH/EDIT STOK ============ -->
+    <div id="modalStok" class="modal">
+        <div class="modal-content" style="width: 500px; max-width: 95%;">
+            <span class="close" id="closeModalStok">&times;</span>
+            <h3 id="modalTitle">Tambah Stok Baru</h3>
+            <form id="formStok">
+                <div class="form-group">
+                    <label>📍 Kode Lokasi</label>
+                    <select id="kodeLokasi" required>
+                        <option value="">Pilih Lokasi</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📦 Kode Barang</label>
+                    <input type="text" id="kodeBarang" required placeholder="Contoh: SKOM4101">
+                </div>
+                <div class="form-group">
+                    <label>📖 Nama Bahan Ajar</label>
+                    <input type="text" id="namaBarang" required placeholder="Contoh: Pengantar Ilmu Komunikasi">
+                </div>
+                <div class="form-group">
+                    <label>📅 Edisi</label>
+                    <input type="text" id="edisi" required placeholder="Contoh: 2">
+                </div>
+                <div class="form-group">
+                    <label>📊 Stok</label>
+                    <input type="number" id="stok" required placeholder="Jumlah stok">
+                </div>
+                <div class="form-group">
+                    <label>🖼️ URL Cover (Gambar)</label>
+                    <input type="text" id="cover" placeholder="img/nama_file.jpg atau https://...">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        💡 <strong>Cara pengisian:</strong><br>
+                        • <strong>File lokal:</strong> img/namafile.jpg (letakkan file di folder img/)<br>
+                        • <strong>URL online:</strong> https://... (gambar dari internet)<br>
+                        • <strong>Kosongkan</strong> untuk placeholder default
+                    </small>
+                </div>
+                
+                <!-- Preview Gambar -->
+                <div id="previewContainer" class="preview-box" style="display: none;">
+                    <label>📷 Preview Cover:</label><br>
+                    <img id="previewImg" class="preview-img" alt="Preview">
+                    <p id="previewStatus" style="font-size: 11px; margin-top: 5px; color: #666;"></p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">💾 Simpan</button>
+                    <button type="button" class="btn btn-danger" onclick="document.getElementById('modalStok').style.display='none'">❌ Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script>
+        // ============ INISIALISASI ============
+        let stokData = [];
+        let editIndex = -1;
+        let currentFilter = 'all';
+        let currentSearch = '';
+        
+        // Cek login
+        if (!localStorage.getItem('loggedInUser')) {
+            alert('Silakan login terlebih dahulu!');
+            window.location.href = 'login.html';
+        }
+        
+        // ============ FUNGSI COVER & GAMBAR ============
+        function validateAndFixCoverPath(coverPath) {
+            if (!coverPath || coverPath === '') {
+                return null;
+            }
+            
+            // Jika sudah URL online (http/https)
+            if (coverPath.startsWith('http://') || coverPath.startsWith('https://')) {
+                return coverPath;
+            }
+            
+            // Jika path dimulai dengan 'img/' atau './img/'
+            if (coverPath.startsWith('img/') || coverPath.startsWith('./img/')) {
+                return coverPath;
+            }
+            
+            // Jika hanya nama file (tanpa folder), tambahkan 'img/'
+            if (!coverPath.includes('/')) {
+                return 'img/' + coverPath;
+            }
+            
+            return coverPath;
+        }
+        
+        // Fungsi untuk menampilkan cover dengan fallback
+        function getCoverElement(coverPath, namaBarang) {
+            const container = document.createElement('div');
+            container.style.textAlign = 'center';
+            
+            const fixedPath = validateAndFixCoverPath(coverPath);
+            
+            if (fixedPath) {
+                const img = document.createElement('img');
+                img.src = fixedPath;
+                img.alt = namaBarang;
+                img.className = 'cover-img';
+                img.title = fixedPath;
+                
+                img.onerror = function() {
+                    console.warn('Gambar gagal dimuat:', fixedPath);
+                    this.style.display = 'none';
+                    const fallback = document.createElement('div');
+                    fallback.className = 'no-cover';
+                    fallback.innerHTML = '📚<br><span style="font-size:8px;">No Img</span>';
+                    fallback.title = 'Gambar tidak tersedia: ' + fixedPath;
+                    container.appendChild(fallback);
+                };
+                
+                img.onload = function() {
+                    console.log('✅ Gambar berhasil dimuat:', fixedPath);
+                };
+                
+                container.appendChild(img);
+            } else {
+                const fallback = document.createElement('div');
+                fallback.className = 'no-cover';
+                fallback.innerHTML = '📚<br><span style="font-size:8px;">No Img</span>';
+                container.appendChild(fallback);
+            }
+            
+            return container;
+        }
+        
+        // ============ PREVIEW GAMBAR DI MODAL ============
+        function updatePreview() {
+            const coverInput = document.getElementById('cover');
+            const coverPath = coverInput.value;
+            const previewContainer = document.getElementById('previewContainer');
+            const previewImg = document.getElementById('previewImg');
+            const previewStatus = document.getElementById('previewStatus');
+            
+            if (coverPath && coverPath.trim() !== '') {
+                const fixedPath = validateAndFixCoverPath(coverPath);
+                previewContainer.style.display = 'block';
+                previewImg.src = fixedPath;
+                previewStatus.textContent = 'Memuat gambar...';
+                previewStatus.style.color = '#666';
+                
+                // Cek apakah gambar berhasil dimuat
+                previewImg.onload = function() {
+                    previewStatus.innerHTML = '✅ Gambar berhasil dimuat!';
+                    previewStatus.style.color = '#28a745';
+                };
+                
+                previewImg.onerror = function() {
+                    previewStatus.innerHTML = '❌ Gambar tidak dapat dimuat. Periksa: pastikan file ada di folder img/ atau URL benar.';
+                    previewStatus.style.color = '#dc3545';
+                    // Tampilkan placeholder
+                    previewImg.src = 'https://via.placeholder.com/100x120?text=No+Image';
+                };
+            } else {
+                previewContainer.style.display = 'none';
+                previewImg.src = '';
+                previewStatus.textContent = '';
+            }
+        }
+        
+        // ============ STATUS STOK ============
+        function getStokClass(stok) {
+            if (stok >= 100) return 'stok-aman';
+            if (stok >= 50) return 'stok-menipis';
+            return 'stok-kritis';
+        }
+        
+        function getStokStatus(stok) {
+            if (stok >= 100) return '✅ Aman';
+            if (stok >= 50) return '⚠️ Menipis';
+            return '❌ Kritis';
+        }
+        
+        // ============ LOAD DATA ============
+        function loadData() {
+            if (typeof dataBahanAjar !== 'undefined') {
+                stokData = [...dataBahanAjar];
+                console.log("✅ Data berhasil dimuat:", stokData.length, "item");
+                loadFilterOptions();
+                renderTabel();
+                updateStatistics();
+            } else {
+                console.error("❌ dataBahanAjar tidak ditemukan!");
+                document.getElementById('tbodyStok').innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">❌ Gagal memuat data. Periksa file data.js</td></tr>';
+            }
+        }
+        
+        function loadFilterOptions() {
+            const filterSelect = document.getElementById('filterLokasi');
+            const uniqueLokasi = [...new Map(stokData.map(item => [item.kodeLokasi, item.namaLokasi])).entries()];
+            
+            filterSelect.innerHTML = '<option value="all">🌍 Semua Lokasi</option>';
+            uniqueLokasi.forEach(([kode, nama]) => {
+                filterSelect.innerHTML += `<option value="${kode}">📍 ${kode} - ${nama}</option>`;
+            });
+            
+            // Load modal select lokasi
+            const modalSelect = document.getElementById('kodeLokasi');
+            modalSelect.innerHTML = '<option value="">Pilih Lokasi</option>';
+            if (typeof dataLokasi !== 'undefined') {
+                dataLokasi.forEach(lok => {
+                    modalSelect.innerHTML += `<option value="${lok.kode}">📍 ${lok.kode} - ${lok.nama}</option>`;
+                });
+            } else {
+                uniqueLokasi.forEach(([kode, nama]) => {
+                    modalSelect.innerHTML += `<option value="${kode}">📍 ${kode} - ${nama}</option>`;
+                });
+            }
+        }
+        
+        function updateStatistics() {
+            let filteredData = getFilteredData();
+            let totalStok = filteredData.reduce((sum, item) => sum + item.stok, 0);
+            let totalItem = filteredData.length;
+            let totalAman = filteredData.filter(item => item.stok >= 100).length;
+            let totalMenipis = filteredData.filter(item => item.stok >= 50 && item.stok < 100).length;
+            let totalKritis = filteredData.filter(item => item.stok < 50).length;
+            
+            document.getElementById('statContainer').innerHTML = `
+                <div class="stat-item">📦 Total Item: ${totalItem}</div>
+                <div class="stat-item">📚 Total Stok: ${totalStok} eksemplar</div>
+                <div class="stat-item">✅ Stok Aman: ${totalAman}</div>
+                <div class="stat-item">⚠️ Stok Menipis: ${totalMenipis}</div>
+                <div class="stat-item">❌ Stok Kritis: ${totalKritis}</div>
+                <div class="stat-item">🏢 Lokasi: ${currentFilter === 'all' ? 'Semua' : currentFilter}</div>
+            `;
+        }
+        
+        function getFilteredData() {
+            let filtered = [...stokData];
+            
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(item => item.kodeLokasi === currentFilter);
+            }
+            
+            if (currentSearch !== '') {
+                const searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(item => 
+                    item.kodeBarang.toLowerCase().includes(searchLower) ||
+                    item.namaBarang.toLowerCase().includes(searchLower)
+                );
+            }
+            
+            return filtered;
+        }
+        
+        // ============ RENDER TABEL ============
+        function renderTabel() {
+            const tbody = document.getElementById('tbodyStok');
+            tbody.innerHTML = '';
+            
+            let filteredData = getFilteredData();
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">📭 Tidak ada data</td></tr>';
+                return;
+            }
+            
+            filteredData.forEach((item, idx) => {
+                const row = tbody.insertRow();
+                
+                // Kolom Cover
+                const cellCover = row.insertCell(0);
+                const coverElement = getCoverElement(item.cover, item.namaBarang);
+                cellCover.appendChild(coverElement);
+                
+                // Kolom Kode Lokasi
+                row.insertCell(1).innerHTML = `<span class="kode-lokasi-badge">${item.kodeLokasi}</span>`;
+                
+                // Kolom Nama Lokasi
+                row.insertCell(2).textContent = item.namaLokasi || '-';
+                
+                // Kolom Kode Barang
+                row.insertCell(3).textContent = item.kodeBarang;
+                
+                // Kolom Nama Barang
+                row.insertCell(4).textContent = item.namaBarang;
+                
+                // Kolom Edisi
+                row.insertCell(5).textContent = `Edisi ${item.edisi}`;
+                
+                // Kolom Stok dengan warna
+                const stokCell = row.insertCell(6);
+                const stokClass = getStokClass(item.stok);
+                const stokStatus = getStokStatus(item.stok);
+                stokCell.innerHTML = `<span class="${stokClass}">${item.stok}</span><br><small>${stokStatus}</small>`;
+                
+                // Kolom Aksi
+                const actionCell = row.insertCell(7);
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = '✏️ Edit';
+                btnEdit.className = 'btn-edit';
+                btnEdit.onclick = () => openEditModal(stokData.indexOf(item));
+                
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = '🗑️ Hapus';
+                btnDelete.className = 'btn-delete';
+                btnDelete.onclick = () => {
+                    if (confirm('⚠️ Yakin ingin menghapus data ini?')) {
+                        const originalIndex = stokData.indexOf(item);
+                        stokData.splice(originalIndex, 1);
+                        renderTabel();
+                        updateStatistics();
+                        alert('✅ Data berhasil dihapus!');
+                    }
+                };
+                
+                actionCell.appendChild(btnEdit);
+                actionCell.appendChild(btnDelete);
+            });
+            
+            updateStatistics();
+        }
+        
+        // ============ MODAL TAMBAH/EDIT ============
+        function openAddModal() {
+            editIndex = -1;
+            document.getElementById('modalTitle').textContent = '➕ Tambah Stok Baru';
+            document.getElementById('formStok').reset();
+            document.getElementById('kodeLokasi').value = '';
+            document.getElementById('kodeBarang').value = '';
+            document.getElementById('namaBarang').value = '';
+            document.getElementById('edisi').value = '';
+            document.getElementById('stok').value = '';
+            document.getElementById('cover').value = '';
+            document.getElementById('previewContainer').style.display = 'none';
+            document.getElementById('modalStok').style.display = 'flex';
+        }
+        
+        function openEditModal(index) {
+            editIndex = index;
+            const item = stokData[index];
+            document.getElementById('modalTitle').textContent = '✏️ Edit Stok Bahan Ajar';
+            document.getElementById('kodeLokasi').value = item.kodeLokasi;
+            document.getElementById('kodeBarang').value = item.kodeBarang;
+            document.getElementById('namaBarang').value = item.namaBarang;
+            document.getElementById('edisi').value = item.edisi;
+            document.getElementById('stok').value = item.stok;
+            document.getElementById('cover').value = item.cover || '';
+            
+            // Update preview jika ada cover
+            if (item.cover) {
+                updatePreview();
+            } else {
+                document.getElementById('previewContainer').style.display = 'none';
+            }
+            
+            document.getElementById('modalStok').style.display = 'flex';
+        }
+        
+        // ============ EVENT LISTENERS ============
+        document.getElementById('btnTambahStok').onclick = openAddModal;
+        
+        document.getElementById('closeModalStok').onclick = () => {
+            document.getElementById('modalStok').style.display = 'none';
+        };
+        
+        document.getElementById('filterLokasi').onchange = function() {
+            currentFilter = this.value;
+            renderTabel();
+        };
+        
+        document.getElementById('searchInput').oninput = function() {
+            currentSearch = this.value;
+            renderTabel();
+        };
+        
+        document.getElementById('btnResetFilter').onclick = function() {
+            document.getElementById('filterLokasi').value = 'all';
+            document.getElementById('searchInput').value = '';
+            currentFilter = 'all';
+            currentSearch = '';
+            renderTabel();
+        };
+        
+        // Preview gambar saat input berubah
+        document.getElementById('cover').addEventListener('input', updatePreview);
+        
+        // Submit form tambah/edit
+        document.getElementById('formStok').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const selectedLokasi = document.getElementById('kodeLokasi').value;
+            let namaLokasi = '';
+            
+            if (typeof dataLokasi !== 'undefined') {
+                const lokasi = dataLokasi.find(l => l.kode === selectedLokasi);
+                namaLokasi = lokasi ? lokasi.nama : selectedLokasi;
+            } else {
+                namaLokasi = selectedLokasi;
+            }
+            
+            const coverValue = document.getElementById('cover').value;
+            const fixedCover = coverValue ? validateAndFixCoverPath(coverValue) : '';
+            
+            const newData = {
+                kodeLokasi: selectedLokasi,
+                namaLokasi: namaLokasi,
+                kodeBarang: document.getElementById('kodeBarang').value,
+                namaBarang: document.getElementById('namaBarang').value,
+                jenisBarang: "BMP",
+                edisi: document.getElementById('edisi').value,
+                stok: parseInt(document.getElementById('stok').value),
+                cover: fixedCover
+            };
+            
+            // Validasi
+            if (!newData.kodeLokasi || !newData.kodeBarang || !newData.namaBarang || isNaN(newData.stok)) {
+                alert('❌ Harap isi semua field dengan benar!');
+                return;
+            }
+            
+            if (editIndex === -1) {
+                stokData.push(newData);
+                alert('✅ Data berhasil ditambahkan!');
+            } else {
+                stokData[editIndex] = newData;
+                alert('✅ Data berhasil diedit!');
+            }
+            
+            document.getElementById('modalStok').style.display = 'none';
+            loadFilterOptions();
+            renderTabel();
+        };
+        
+        // Logout
+        document.getElementById('logoutNav').onclick = function(e) {
+            e.preventDefault();
+            if (confirm('Yakin ingin logout?')) {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'login.html';
+            }
+        };
+        
+        // Tutup modal klik di luar
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        };
+        
+        // Load data saat halaman siap
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

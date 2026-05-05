@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tracking Pengiriman - SITTA UT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- HTML5 QR Code Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
+    <style>
+        .tracking-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status-diproses { background: #ffc107; color: #333; }
+        .status-dalam-perjalanan { background: #17a2b8; color: white; }
+        .status-dikirim { background: #28a745; color: white; }
+        
+        .detail-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .detail-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .detail-item label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            display: block;
+        }
+        .detail-item p {
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        .timeline {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .timeline-item {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .timeline-time {
+            width: 180px;
+            font-weight: bold;
+            color: #1a4d8c;
+            font-size: 13px;
+        }
+        .timeline-desc {
+            flex: 1;
+            font-size: 13px;
+        }
+        .progress-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 25px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        /* QR Scanner Styles */
+        .qr-scanner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-reader {
+            width: 100%;
+            max-width: 500px;
+            background: black;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .qr-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2001;
+        }
+        .qr-info {
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .btn-scan {
+            background: #1a4d8c;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .btn-scan:hover { background: #0a2a4a; }
+        .btn-simulasi:hover { background: #5a6268; }
+        .camera-selector {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-top: 10px;
+        }
+        .do-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .do-item {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #ddd;
+        }
+        .do-item:hover {
+            background: #1a4d8c;
+            color: white;
+            transform: scale(1.02);
+        }
+        .do-code {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .do-desc {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚚 Tracking Pengiriman Bahan Ajar</h1>
+            <p>Lacak status delivery order (DO) - Scan QR Code atau pilih dari daftar</p>
+        </header>
+        
+        <nav>
+            <a href="dashboard.html">🏠 Dashboard</a>
+            <a href="stok.html">📚 Stok Bahan Ajar</a>
+            <a href="tracking.html">🚚 Tracking Pengiriman</a>
+            <a href="#" id="logoutNav">🚪 Logout</a>
+        </nav>
+        
+        <main>
+            <div class="card">
+                <form id="trackingForm" onsubmit="return false;">
+                    <div class="form-group">
+                        <label>📦 Nomor Delivery Order (DO)</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" id="noDO" placeholder="Contoh: 2023001234, 2023005678" required style="flex: 1;">
+                            <button type="button" id="btnScanQR" class="btn-scan">📷 Scan QR Code</button>
+                            <button type="button" id="btnSimulasiQR" class="btn-scan" style="background: #6c757d;">📋 Simulasi QR</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btnCari">🔍 Cari</button>
+                </form>
+            </div>
+            
+            <div id="hasilTracking" style="display: none;">
+                <!-- Hasil tracking akan muncul di sini -->
+            </div>
+            
+            <div id="errorTracking" class="alert alert-error" style="display: none; background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px;">
+                ❌ Nomor Delivery Order tidak ditemukan! Silakan coba lagi.
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal QR Scanner (Kamera) -->
+    <div id="qrScannerModal" style="display: none;">
+        <div class="qr-scanner-container">
+            <button class="qr-close-btn" id="closeScannerBtn">✕</button>
+            <div id="qr-reader" class="qr-reader"></div>
+            <div class="qr-info">
+                <p>📱 Arahkan kamera ke QR Code DO</p>
+                <select id="cameraSelect" class="camera-selector"></select>
+                <p style="font-size: 12px; margin-top: 10px;">* Pastikan QR Code DO terlihat jelas dalam bingkai</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Simulasi QR (Pilih DO Manual) -->
+    <div id="modalSimulasiQR" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <span class="close" id="closeSimulasiQR">&times;</span>
+            <h3>📋 Simulasi Scan QR Code</h3>
+            <p>Pilih nomor Delivery Order dari daftar:</p>
+            <div class="do-list">
+                <div class="do-item" onclick="pilihSimulasi('2023001234')">
+                    <div class="do-code">📦 DO: 2023001234</div>
+                    <div class="do-desc">👤 Rina Wulandari | 🚚 JNE | 📍 Jakarta</div>
+                </div>
+                <div class="do-item" onclick="pilihSimulasi('2023005678')">
+                    <div class="do-code">📦 DO: 2023005678</div>
+                    <div class="do-desc">👤 Agus Pranoto | 🚚 Pos Indonesia | 📍 Makassar</div>
+                </div>
+                <div class="do-item" onclick="pilihSimulasi('2023009999')">
+                    <div class="do-code">📦 DO: 2023009999</div>
+                    <div class="do-desc">👤 Budi Santoso | 🚚 SiCepat | 📍 Surabaya</div>
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #666; margin-top: 15px;">💡 Fitur ini sebagai alternatif jika kamera tidak dapat diakses</p>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script>
+        let html5QrCode = null;
+        let currentCameraId = null;
+        
+        // Cek login
+        if (!localStorage.getItem('loggedInUser')) {
+            alert('Silakan login terlebih dahulu!');
+            window.location.href = 'login.html';
+        }
+        
+        // Fungsi helper
+        function getNamaBarangByKode(kodeBarang) {
+            if (typeof dataBahanAjar !== 'undefined') {
+                const barang = dataBahanAjar.find(item => item.kodeBarang === kodeBarang);
+                return barang ? barang.namaBarang : kodeBarang;
+            }
+            return kodeBarang;
+        }
+        
+        function getProgressClass(status) {
+            if (status === 'Diproses') return 'status-diproses';
+            if (status === 'Dalam Perjalanan') return 'status-dalam-perjalanan';
+            return 'status-dikirim';
+        }
+        
+        function displayTracking(data, noDO) {
+            const namaBarang = getNamaBarangByKode(data.paket);
+            const progress = data.progress || (data.status === 'Dikirim' ? 100 : data.status === 'Dalam Perjalanan' ? 60 : 25);
+            const statusClass = getProgressClass(data.status);
+            
+            const html = `
+                <div class="tracking-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                        <h3>👤 ${data.nama}</h3>
+                        <span class="status-badge ${statusClass}">${data.status}</span>
+                    </div>
+                    <p style="color: #666;">NIM: ${data.nim || '-'} | No DO: ${noDO}</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${progress}%;">${progress}%</div>
+                    </div>
+                    
+                    <div class="detail-info">
+                        <div class="detail-item">
+                            <label>🚚 Ekspedisi</label>
+                            <p>${data.ekspedisi}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>📅 Tanggal Kirim</label>
+                            <p>${data.tanggalKirim}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>📦 Nama Paket</label>
+                            <p>${namaBarang} (${data.paket})</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>💰 Total Pembayaran</label>
+                            <p>${data.total}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>📍 Alamat Tujuan</label>
+                            <p>${data.alamat || '-'}</p>
+                        </div>
+                    </div>
+                    
+                    <h4>📋 Riwayat Perjalanan Paket:</h4>
+                    <div class="timeline">
+                        ${data.perjalanan && data.perjalanan.length > 0 ? 
+                            data.perjalanan.map(perj => `
+                                <div class="timeline-item">
+                                    <div class="timeline-time">📅 ${perj.waktu}</div>
+                                    <div class="timeline-desc">📍 ${perj.keterangan}</div>
+                                </div>
+                            `).join('') : 
+                            '<p>Belum ada riwayat perjalanan.</p>'
+                        }
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('hasilTracking').innerHTML = html;
+            document.getElementById('hasilTracking').style.display = 'block';
+            document.getElementById('errorTracking').style.display = 'none';
+        }
+        
+        function searchTracking(noDO) {
+            const data = dataTracking[noDO];
+            if (data) {
+                displayTracking(data, noDO);
+            } else {
+                document.getElementById('hasilTracking').style.display = 'none';
+                document.getElementById('errorTracking').style.display = 'block';
+            }
+        }
+        
+        // Event handler untuk tombol Cari
+        document.getElementById('btnCari').onclick = function() {
+            const noDO = document.getElementById('noDO').value.trim();
+            if (noDO) {
+                searchTracking(noDO);
+            } else {
+                alert('Masukkan Nomor Delivery Order terlebih dahulu!');
+            }
+        };
+        
+        document.getElementById('trackingForm').onsubmit = function(e) {
+            e.preventDefault();
+            document.getElementById('btnCari').click();
+        };
+        
+        // ============ FUNGSI SIMULASI QR (MANUAL) ============
+        function pilihSimulasi(noDO) {
+            document.getElementById('noDO').value = noDO;
+            document.getElementById('modalSimulasiQR').style.display = 'none';
+            searchTracking(noDO);
+            alert(`✅ Simulasi QR Code: ${noDO} berhasil diproses`);
+        }
+        
+        document.getElementById('btnSimulasiQR').onclick = function() {
+            document.getElementById('modalSimulasiQR').style.display = 'flex';
+        };
+        
+        document.getElementById('closeSimulasiQR').onclick = function() {
+            document.getElementById('modalSimulasiQR').style.display = 'none';
+        };
+        
+        // ============ FUNGSI SCAN QR KAMERA ============
+        async function startQrScanner() {
+            const scannerModal = document.getElementById('qrScannerModal');
+            scannerModal.style.display = 'block';
+            
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                const cameraSelect = document.getElementById('cameraSelect');
+                cameraSelect.innerHTML = '';
+                
+                videoDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Kamera ${index + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+                
+                if (videoDevices.length === 0) {
+                    alert('Tidak ada kamera yang terdeteksi! Gunakan fitur Simulasi QR.');
+                    stopQrScanner();
+                    return;
+                }
+                
+                let backCamera = videoDevices.find(device => 
+                    device.label.toLowerCase().includes('back') || 
+                    device.label.toLowerCase().includes('rear') ||
+                    device.label.toLowerCase().includes('environment')
+                );
+                
+                currentCameraId = backCamera ? backCamera.deviceId : videoDevices[0].deviceId;
+                cameraSelect.value = currentCameraId;
+                
+                html5QrCode = new Html5Qrcode("qr-reader");
+                const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                
+                await html5QrCode.start(
+                    currentCameraId,
+                    config,
+                    (decodedText, decodedResult) => {
+                        console.log("QR Code detected:", decodedText);
+                        stopQrScanner();
+                        document.getElementById('noDO').value = decodedText;
+                        searchTracking(decodedText);
+                        alert(`✅ QR Code terdeteksi: ${decodedText}`);
+                    },
+                    (errorMessage) => {}
+                );
+                
+                cameraSelect.onchange = async function() {
+                    if (html5QrCode && html5QrCode.isScanning) {
+                        const newCameraId = cameraSelect.value;
+                        await html5QrCode.stop();
+                        await html5QrCode.start(newCameraId, config, 
+                            (decodedText) => {
+                                stopQrScanner();
+                                document.getElementById('noDO').value = decodedText;
+                                searchTracking(decodedText);
+                                alert(`✅ QR Code terdeteksi: ${decodedText}`);
+                            },
+                            (errorMessage) => {}
+                        );
+                        currentCameraId = newCameraId;
+                    }
+                };
+                
+            } catch (err) {
+                console.error("Error starting QR scanner:", err);
+                alert("Tidak dapat mengakses kamera. Pastikan:\n- Website diakses via HTTPS atau localhost\n- Anda sudah memberikan izin akses kamera\n- Atau gunakan fitur Simulasi QR");
+                stopQrScanner();
+            }
+        }
+        
+        function stopQrScanner() {
+            const scannerModal = document.getElementById('qrScannerModal');
+            scannerModal.style.display = 'none';
+            
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(err => {
+                    console.error("Error stopping scanner:", err);
+                });
+            }
+        }
+        
+        document.getElementById('btnScanQR').onclick = function() {
+            if (window.location.protocol === 'file:') {
+                alert('❌ Scan QR Code memerlukan koneksi HTTPS atau localhost!\n\nGunakan Live Server di VS Code, atau gunakan fitur Simulasi QR.');
+                return;
+            }
+            startQrScanner();
+        };
+        
+        document.getElementById('closeScannerBtn').onclick = stopQrScanner;
+        
+        // Logout
+        document.getElementById('logoutNav').onclick = function(e) {
+            e.preventDefault();
+            if (confirm('Yakin ingin logout?')) {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'login.html';
+            }
+        };
+        
+        // Tutup modal jika klik di luar
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+            if (event.target.classList.contains('qr-scanner-container')) {
+                stopQrScanner();
+            }
+        };
+        
+        console.log("✅ Halaman siap - Dilengkapi Scan QR & Simulasi QR");
+    </script>
+</body>
+</html>
